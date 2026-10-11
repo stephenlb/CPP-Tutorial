@@ -5,9 +5,11 @@
 using namespace std;
 
 int main () {
+    //int number = 100;
     const int number = 100;
+    ///number += 1;
+
     //int* numberPointer = &number;
-    //number += 1;
     float fraction = 10.01234;
     double bigger_fraction = 100000.0123456789;
     char letter = 'A';
@@ -26,6 +28,10 @@ int main () {
 
     std::cout << name << endl;
     std::cout << number << endl;
+
+    println("{}", bigger_fraction / fraction);
+
+    println("{} {}", sizeof(bigger_fraction), sizeof(bigger_fraction) * 8);
 
     return 0;
 }

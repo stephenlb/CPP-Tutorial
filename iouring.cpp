@@ -26,7 +26,9 @@ struct Conn {
 
     if (!conn)          io_uring_prep_accept(job, server_fd, nullptr, nullptr, 0);
     else if(conn->size) io_uring_prep_send(job, conn->sock, conn->buffer, conn->size, 0);
-    else                io_uring_prep_recv(job, conn->sock, conn->buffer, conn->size, 0);
+    else                io_uring_prep_recv(job, conn->sock, conn->buffer, BUFFER_SIZE, 0);
+
+    io_uring_sqe_set_data(job, conn);
 }
 
 int main() {
@@ -40,31 +42,44 @@ int main() {
 
     // Event Loop
     cout << "Starting event loop\n";
+    int loopcount = 0;
+    int maxloops = 200;
     while (true) {
+        if (loopcount++ > maxloops) break;
         struct io_uring_cqe* cqe;
-        cout << "2222\n";
+        //cout << "2222\n";
         io_uring_submit_and_wait(&ring, 1);
-        cout << "3333\n";
+        //cout << "3333\n";
         io_uring_peek_cqe(&ring, &cqe);
+
+        // Client Connection
         auto* conn = (Conn *)io_uring_cqe_get_data(cqe);
         int result = cqe->res;
-        cout << "------\n";
-        cout << sizeof(conn->buffer) << "\n";
-        cout << "Result: " << result << "\n";
-        cout << "------\n";
+        io_uring_cqe_seen(&ring, cqe);
 
-        break; 
+
+        //cout << "------\n";
+        //cout << sizeof(conn->buffer) << "\n";
+        //cout << "Result: " << result << "\n";
+        //cout << "------\n";
+
+        // Inbound Connect (new connection) from client
+        if (!conn) {
+            queue(nullptr);
+            if (result >= 0) queue(new Conn{result, 0});
+        }
+
+        // Closing
+        else if (result <= 0) {
+            close(conn->sock);
+            delete conn;
+        }
+        else {
+            conn->size = conn->size ? 0 : result;
+            queue(conn);
+        }
     }
 
-    //io_uring_peek_cqe
-    //io_uring_peek_batch_cqe
-
-    
-    /*setup network port host fd bind and listen*/
-    /*
-    io_uring_prep_accept();
-    io_uring_submit();
-    */
     cout << "HELLO!!!! BreakingGood\n";
     return 0;
 }
